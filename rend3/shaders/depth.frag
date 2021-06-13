@@ -12,6 +12,7 @@ layout(location = 2) in vec4 i_color;
 layout(location = 3) flat in uint i_material;
 
 layout(set = 0, binding = 0) uniform sampler linear_sampler;
+layout(set = 0, binding = 1) uniform sampler nearest_sampler;
 layout(set = 1, binding = 0, std430) restrict readonly buffer ObjectOutputDataBuffer {
     ObjectOutputData object_output[];
 };
@@ -42,6 +43,15 @@ layout(set = 3, binding = 10) uniform TextureData {
 
 #include "lighting/texture_access.glsl"
 
+
+vec4 read_albedo(vec2 coords) {
+    if (MATERIAL_FLAG(FLAGS_NEAREST)) {
+        return texture(sampler2D(ALBEDO_TEXTURE, nearest_sampler), coords);
+    } else {
+        return texture(sampler2D(ALBEDO_TEXTURE, linear_sampler), coords);
+    }
+}
+
 void main() {
     #ifdef GPU_MODE
     GPUMaterialData material = materials[i_material];
@@ -51,7 +61,7 @@ void main() {
 
     if (has_albedo) {
         vec2 coords = vec2(material.uv_transform * vec3(i_coords, 1.0));
-        vec4 albedo = texture(sampler2D(ALBEDO_TEXTURE, linear_sampler), coords);
+        vec4 albedo = read_albedo(coords);
 
         if (albedo.a <= 0.5) {
             discard;
